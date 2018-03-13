@@ -30,6 +30,8 @@ class Hyperparams:
     d = 256 # == hidden units of Text2Mel
     c = 512 # == hidden units of SSRN
     attention_win_size = 3
+    discriminator_width = 80
+    discriminator_hidden = 160
 
     # data
     data = "/data/private/voice/LJSpeech-1.0"
