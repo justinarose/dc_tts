@@ -20,7 +20,7 @@ def get_target_file_paths():
     filename = os.path.join(hp.target_data, 'fnames.txt')
     fpaths = codecs.open(filename, 'r').readlines()
 
-    fpaths = [f.strip() for f in fpath]
+    fpaths = [f.strip() for f in fpaths]
     return fpaths
 
 def load_vocab():
