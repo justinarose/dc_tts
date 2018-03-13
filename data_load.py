@@ -200,7 +200,6 @@ def get_false_batch_discriminator():
 
         # Add shape information
         fname.set_shape(())
-        text.set_shape((None,))
         mel.set_shape((None, hp.n_mels))
         mag.set_shape((None, hp.n_fft//2+1))
         length = tf.shape(mel)[0]
