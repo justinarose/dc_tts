@@ -43,7 +43,7 @@ class DiscriminatorGraph():
         self.clipped = []
         for grad, var in self.gvs:
         	grad = tf.clip_by_value(grad, -1., 1.)
-            self.clipped.append((grad, var))
+        	self.clipped.append((grad, var))
             self.train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
 
 
@@ -61,11 +61,6 @@ if __name__ == '__main__':
                 # Write checkpoint files at every 1k steps
                 if gs % 1000 == 0:
                     sv.saver.save(sess, logdir + '/model_gs_{}'.format(str(gs // 1000).zfill(3) + "k"))
-
-                    if num==1:
-                        # plot alignment
-                        alignments = sess.run(g.alignments)
-                        plot_alignment(alignments[0], str(gs // 1000).zfill(3) + "k", logdir)
 
                 # break
                 if gs > hp.num_iterations: break
