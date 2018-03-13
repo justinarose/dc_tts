@@ -35,6 +35,7 @@ class Hyperparams:
 
     # data
     data = "/home/ubuntu/data/LJSpeech-1.1"
+    target_data = "/home/ubuntu/data/target_wavs"
     # data = "/data/private/voice/kate"
     test_data = 'harvard_sentences.txt'
     vocab = "PE abcdefghijklmnopqrstuvwxyz'.?" # P: Padding, E: EOS.
