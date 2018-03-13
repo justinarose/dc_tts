@@ -18,7 +18,7 @@ filename = os.path.join(hp.target_data, 'fnames.txt')
 fpaths = codecs.open(filename, 'r').readlines()
 
 for fpath in tqdm.tqdm(fpaths):
-	fpath = fpath.strip()
+    fpath = fpath.strip()
     fname, mel, mag = load_spectrograms(fpath)
     if not os.path.exists("target_mels"): os.mkdir("target_mels")
     if not os.path.exists("target_mags"): os.mkdir("target_mags")
