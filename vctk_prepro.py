@@ -14,12 +14,8 @@ import tqdm
 import codecs
 from hyperparams import Hyperparams as hp
 
-def get_target_file_paths():
-    filename = os.path.join(hp.target_data, 'fnames.txt')
-    fpaths = codecs.open(filename, 'r').readlines()
+from data_load import get_target_file_paths
 
-    fpaths = [f.strip() for f in fpath]
-    return fpaths
 
 files = get_target_file_paths()
 
