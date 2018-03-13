@@ -140,17 +140,28 @@ def get_batch():
 def get_true_batch_discriminator():
     with tf.device('/cpu:0'):
         # Load VCTK data
-        fpaths = get_target_file_paths()
+        fpaths_true = get_target_file_paths()
+        fpaths_true = fpaths_true[:350]
+        y_true = np.ones((len(fpaths_true), 1))
+
+        fpaths_false, _, _ = load_data() # list
+        fpaths_false = fpaths_false[:400]
+        y_false = np.zeros((len(fpaths_false), 1))
+
+        fpaths = np.concatenate((fpaths_true, fpaths_false))
+        ys = np.concatenate((y_true, y_false))
+
+        # Calc total batch count
         num_batch = len(fpaths) // hp.B
 
         # Create Queues
-        fpath = tf.train.slice_input_producer([fpaths], shuffle=True)
+        fpath, y = tf.train.slice_input_producer([fpaths, ys], shuffle=True)
 
         if hp.prepro:
             def _load_discriminator_spectrograms(fpath):
                 fname = os.path.basename(fpath)
-                mel = "target_mels".format(fname.replace("wav", "npy"))
-                mag = "target_mags".format(fname.replace("wav", "npy"))
+                mel = "mels".format(fname.replace("wav", "npy"))
+                mag = "mags".format(fname.replace("wav", "npy"))
                 return fname, np.load(mel), np.load(mag)
             fname, mel, mag = tf.py_func(_load_discriminator_spectrograms, [fpath], [tf.string, tf.float32, tf.float32])
         else:
@@ -163,15 +174,15 @@ def get_true_batch_discriminator():
         length = tf.shape(mel)[0]
 
         #batching
-        _, (mels, mags, fnames) = tf.contrib.training.bucket_by_sequence_length(
+        _, (mels, mags, ys, fnames) = tf.contrib.training.bucket_by_sequence_length(
                                         input_length=length,
-                                        tensors = [mel, mag, fname],
+                                        tensors = [mel, mag, y, fname],
                                         batch_size = hp.B,
                                         bucket_boundaries = [i for i in range(50, 210, 40)],
                                         num_threads=8,
                                         capacity=hp.B*4,
                                         dynamic_pad=True)
-    return mels, mags, fname, num_batch
+    return mels, mags, ys, fnames, num_batch
 
 
 # Only really for testing discriminator, won't use on actual model
