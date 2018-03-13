@@ -12,6 +12,7 @@ from data_load import load_data
 import numpy as np
 import tqdm
 import codecs
+from hyperparams import Hyperparams as hp
 
 filename = os.path.join(hp.target_data, 'fnames.txt')
 fpaths = codecs.open(filename, 'r').readlines()
