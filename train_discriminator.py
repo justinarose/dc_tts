@@ -44,7 +44,7 @@ class DiscriminatorGraph():
         for grad, var in self.gvs:
         	grad = tf.clip_by_value(grad, -1., 1.)
         	self.clipped.append((grad, var))
-            self.train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
+        	self.train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
 
 
 if __name__ == '__main__':
