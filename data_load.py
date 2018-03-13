@@ -15,6 +15,7 @@ import codecs
 import re
 import os
 import unicodedata
+from vctk_prepro import get_target_file_paths
 
 def load_vocab():
     char2idx = {char: idx for idx, char in enumerate(hp.vocab)}
@@ -129,4 +130,40 @@ def get_batch():
                                             dynamic_pad=True)
 
     return texts, mels, mags, fnames, num_batch
+
+def get_true_batch_discriminator():
+    with tf.device('/cpu:0'):
+        # Load VCTK data
+        fpaths = get_target_file_paths()
+        num_batch = len(fpaths) // hp.B
+
+        # Create Queues
+        fpath = tf.train.slice_input_producer([fpaths], shuffle=True)
+
+        if hp.prepro:
+            def _load_discriminator_spectrograms(fpath):
+                fname = os.path.basename(fpath)
+                mel = "target_mels".format(fname.replace("wav", "npy"))
+                mag = "target_mags".format(fname.replace("wav", "npy"))
+                return fname, np.load(mel), np.load(mag)
+            fname, mel, mag = tf.py_func(_load_discriminator_spectrograms, [fpath], [tf.string, tf.float32, tf.float32])
+        else:
+            print('Could not load')
+
+        # Add shape information
+        fname.set_shape(())
+        mel.set_shape((None, hp.n_mels))
+        mag.set_shape((None, hp.n_fft//2 + 1))
+        length = tf.shape(mel)[0]
+
+        #batching
+        _, (mels, mags, fnames) = tf.contrib.training.bucket_by_sequence_length(
+                                        input_length=length,
+                                        tensors = [mel, mag, fname],
+                                        batch_size = hp.B,
+                                        bucket_boundaries = [i for i in range(50, 210, 40)],
+                                        num_threads=8,
+                                        capacity=hp.B*4,
+                                        dynamic_pad=True)
+    return mels, mags, fname
 
