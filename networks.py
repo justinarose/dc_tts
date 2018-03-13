@@ -348,8 +348,9 @@ def Discriminator(mels, training=True):
 
     # -> (B, 1)
     with tf.variable_scope("Dense"):
-        tensor = tf.layers.dense(tensor, units=1, activation=tf.nn.sigmoid)
+        logits = tf.layers.dense(tensor, units=1)
+        Y = tf.nn.sigmoid(logits)
 
 
-    return tensor
+    return logits, Y
 
