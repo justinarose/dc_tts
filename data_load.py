@@ -171,5 +171,48 @@ def get_true_batch_discriminator():
                                         num_threads=8,
                                         capacity=hp.B*4,
                                         dynamic_pad=True)
-    return mels, mags, fname
+    return mels, mags, fname, num_batch
+
+
+# Only really for testing discriminator, won't use on actual model
+def get_false_batch_discriminator():
+    with tf.device('/cpu:0'):
+        # Load data
+        fpaths, _, _ = load_data() # list
+        fpaths = fpaths[:400]
+
+        # Calc total batch count
+        num_batch = len(fpaths) // hp.B
+
+        # Create Queues
+        fpath = tf.train.slice_input_producer([fpaths], shuffle=True)
+
+        if hp.prepro:
+            def _load_spectrograms(fpath):
+                fname = os.path.basename(fpath)
+                mel = "mels/{}".format(fname.replace("wav", "npy"))
+                mag = "mags/{}".format(fname.replace("wav", "npy"))
+                return fname, np.load(mel), np.load(mag)
+
+            fname, mel, mag = tf.py_func(_load_spectrograms, [fpath], [tf.string, tf.float32, tf.float32])
+        else:
+            fname, mel, mag = tf.py_func(load_spectrograms, [fpath], [tf.string, tf.float32, tf.float32])  # (None, n_mels)
+
+        # Add shape information
+        fname.set_shape(())
+        text.set_shape((None,))
+        mel.set_shape((None, hp.n_mels))
+        mag.set_shape((None, hp.n_fft//2+1))
+        length = tf.shape(mel)[0]
+
+        #batching
+        _, (mels, mags, fnames) = tf.contrib.training.bucket_by_sequence_length(
+                                        input_length=length,
+                                        tensors = [mel, mag, fname],
+                                        batch_size = hp.B,
+                                        bucket_boundaries = [i for i in range(50, 210, 40)],
+                                        num_threads=8,
+                                        capacity=hp.B*4,
+                                        dynamic_pad=True)
+    return mels, mags, fname, num_batch
 
