@@ -141,11 +141,9 @@ def get_true_batch_discriminator():
     with tf.device('/cpu:0'):
         # Load VCTK data
         fpaths_true = get_target_file_paths()
-        fpaths_true = fpaths_true[:350]
         y_true = np.ones((len(fpaths_true), 1), dtype=np.float32)
 
         fpaths_false, _, _ = load_data() # list
-        fpaths_false = fpaths_false[:400]
         y_false = np.zeros((len(fpaths_false), 1), dtype=np.float32)
 
         fpaths = np.concatenate((fpaths_true, fpaths_false))
@@ -190,7 +188,6 @@ def get_false_batch_discriminator():
     with tf.device('/cpu:0'):
         # Load data
         fpaths, _, _ = load_data() # list
-        fpaths = fpaths[:400]
 
         # Calc total batch count
         num_batch = len(fpaths) // hp.B

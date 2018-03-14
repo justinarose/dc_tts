@@ -19,21 +19,21 @@ import sys
 
 class DiscriminatorGraph:
     def __init__(self, mode="train"):
-    	self.mels, self.mags, self.ys, self.fnames, self.num_batch = get_true_batch_discriminator()
+        self.mels, self.mags, self.ys, self.fnames, self.num_batch = get_true_batch_discriminator()
 
-    	training = True if mode=="train" else False
+        training = True if mode=="train" else False
 
-    	with tf.variable_scope("Discriminator"):
-    		self.yLogits, self.yPred = Discriminator(self.mels, training=training)
+        with tf.variable_scope("Discriminator"):
+            self.yLogits, self.yPred = Discriminator(self.mels, training=training)
 
-    	with tf.variable_scope("gs"):
+        with tf.variable_scope("gs"):
             self.global_step = tf.Variable(0, name='global_step', trainable=False)
 
-    	self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.yLogits, labels=self.ys))
-    	tf.summary.scalar('train/loss', self.loss)
-    	
+        self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.yLogits, labels=self.ys))
+        tf.summary.scalar('train/loss', self.loss)
+        
 
-    	# Training Scheme
+        # Training Scheme
         self.lr = learning_rate_decay(hp.lr, self.global_step)
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         tf.summary.scalar("lr", self.lr)
@@ -42,9 +42,9 @@ class DiscriminatorGraph:
         self.gvs = self.optimizer.compute_gradients(self.loss)
         self.clipped = []
         for grad, var in self.gvs:
-        	grad = tf.clip_by_value(grad, -1., 1.)
-        	self.clipped.append((grad, var))
-        	self.train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
+            grad = tf.clip_by_value(grad, -1., 1.)
+            self.clipped.append((grad, var))
+            self.train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
 
 
 if __name__ == '__main__':
