@@ -19,7 +19,7 @@ from data_load import get_target_file_paths
 
 files = get_target_file_paths()
 
-for fpath in tqdm.tqdm(fiels):
+for fpath in tqdm.tqdm(files):
     fname, mel, mag = load_spectrograms(fpath)
     if not os.path.exists("target_mels"): os.mkdir("target_mels")
     if not os.path.exists("target_mags"): os.mkdir("target_mags")

@@ -301,7 +301,7 @@ def Discriminator(mels, training=True):
 
     # -> (B, discriminator_width, n_mels)
     tensor = padded[:, 0:hp.discriminator_width, :]
-
+    tensor.set_shape((None, hp.discriminator_width, hp.n_mels))
     # -> (B, discriminator_width, discriminator_hidden)
     for _ in range(2):
         tensor = conv1d(tensor, 

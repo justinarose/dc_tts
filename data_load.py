@@ -142,11 +142,11 @@ def get_true_batch_discriminator():
         # Load VCTK data
         fpaths_true = get_target_file_paths()
         fpaths_true = fpaths_true[:350]
-        y_true = np.ones((len(fpaths_true), 1))
+        y_true = np.ones((len(fpaths_true), 1), dtype=np.float32)
 
         fpaths_false, _, _ = load_data() # list
         fpaths_false = fpaths_false[:400]
-        y_false = np.zeros((len(fpaths_false), 1))
+        y_false = np.zeros((len(fpaths_false), 1), dtype=np.float32)
 
         fpaths = np.concatenate((fpaths_true, fpaths_false))
         ys = np.concatenate((y_true, y_false))
@@ -160,8 +160,8 @@ def get_true_batch_discriminator():
         if hp.prepro:
             def _load_discriminator_spectrograms(fpath):
                 fname = os.path.basename(fpath)
-                mel = "mels".format(fname.replace("wav", "npy"))
-                mag = "mags".format(fname.replace("wav", "npy"))
+                mel = "mels/{}".format(fname.replace("wav", "npy"))
+                mag = "mags/{}".format(fname.replace("wav", "npy"))
                 return fname, np.load(mel), np.load(mag)
             fname, mel, mag = tf.py_func(_load_discriminator_spectrograms, [fpath], [tf.string, tf.float32, tf.float32])
         else:

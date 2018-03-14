@@ -17,8 +17,8 @@ import tensorflow as tf
 from utils import *
 import sys
 
-class DiscriminatorGraph():
-    def __init__(self, num=1, mode="train"):
+class DiscriminatorGraph:
+    def __init__(self, mode="train"):
     	self.mels, self.mags, self.ys, self.fnames, self.num_batch = get_true_batch_discriminator()
 
     	training = True if mode=="train" else False
@@ -29,7 +29,7 @@ class DiscriminatorGraph():
     	with tf.variable_scope("gs"):
             self.global_step = tf.Variable(0, name='global_step', trainable=False)
 
-    	self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.Y_logits, labels=self.mels))
+    	self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.yLogits, labels=self.ys))
     	tf.summary.scalar('train/loss', self.loss)
     	
 
@@ -49,7 +49,7 @@ class DiscriminatorGraph():
 
 if __name__ == '__main__':
 
-    g = DiscriminatorGraph(num=num); print("Training Graph loaded")
+    g = DiscriminatorGraph(); print("Training Graph loaded")
 
     logdir = hp.logdir + "-" + 'discriminator'
     sv = tf.train.Supervisor(logdir=logdir, save_model_secs=0, global_step=g.global_step)
