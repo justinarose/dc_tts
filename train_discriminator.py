@@ -19,7 +19,13 @@ import sys
 
 class DiscriminatorGraph:
     def __init__(self, mode="train"):
-        self.mels, _, self.ys, _, self.num_batch = get_train_batch_discriminator()
+        self.train_mels, _, self.train_ys, _, self.num_batch = get_train_batch_discriminator()
+        self.val_mels, _, self.val_ys, _, _ = get_validation_batch_discriminator()
+
+        self.am_validation = tf.place_holder_with_default(False, dtype=bool)
+
+        self.mels = tf.cond(am_validation, lambda:self.val_mels, lambda:self.train_mels)
+        self.ys = tf.cond(am_validation, lambda:self.val_ys, lambda:self.train_ys)
 
         training = True if mode=="train" else False
 
@@ -76,7 +82,7 @@ if __name__ == '__main__':
                 if gs % 100 == 0:
                     mels, _, ys, _, _ = get_validation_batch_discriminator()
                     loss, acc = sess.run([g.validation_loss_summary, g.validation_acc_summary],
-                                         feed_dict={g.mels: mels, g.ys: ys})
+                                         feed_dict={g.am_validation: True})
                     sv.summary_writer.add_summary(loss, global_step = gs)
                     sv.summary_writer.add_summary(acc, global_step = gs)
 
