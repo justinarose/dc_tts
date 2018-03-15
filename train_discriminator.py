@@ -72,7 +72,8 @@ if __name__ == '__main__':
     with sv.managed_session() as sess:
         while 1:
             for _ in tqdm(range(g.num_batch), total=g.num_batch, ncols=70, leave=False, unit='b'):
-                gs, _ = sess.run([g.global_step, g.train_op])
+                gs, _, ys = sess.run([g.global_step, g.train_op, g.ys])
+                print(ys)
 
                 # Write checkpoint files at every 1000 steps
                 if gs % 1000 == 0:
