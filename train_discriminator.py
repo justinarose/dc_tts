@@ -9,7 +9,7 @@ from __future__ import print_function
 
 from tqdm import tqdm
 
-from data_load import get_batch, load_vocab, get_true_batch_discriminator
+from data_load import get_batch, load_vocab, get_train_batch_discriminator, get_validation_batch_discriminator
 from hyperparams import Hyperparams as hp
 from modules import *
 from networks import TextEnc, AudioEnc, AudioDec, Attention, SSRN, Discriminator
@@ -19,7 +19,7 @@ import sys
 
 class DiscriminatorGraph:
     def __init__(self, mode="train"):
-        self.mels, _, self.ys, _, self.num_batch = get_true_batch_discriminator()
+        self.mels, _, self.ys, _, self.num_batch = get_train_batch_discriminator()
 
         training = True if mode=="train" else False
 
@@ -31,7 +31,7 @@ class DiscriminatorGraph:
 
         self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.yLogits, labels=self.ys))
         self.roundedYPred = tf.greater(self.yPred, 0.5)
-        self.correct = tf.equal(self.roundedYPred, ys)
+        self.correct = tf.equal(self.roundedYPred, tf.equal(self.ys,1.0))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct, 'float'))
         
         self.train_loss_summary = tf.summary.scalar('train/train_loss', self.loss)
@@ -76,7 +76,7 @@ if __name__ == '__main__':
                 if gs % 100 == 0:
                     mels, _, ys, _, _ = get_validation_batch_discriminator()
                     loss, acc = sess.run([g.validation_loss_summary, g.validation_acc_summary],
-                                         feed_dict={g.mels: mels, g.ys = ys})
+                                         feed_dict={g.mels: mels, g.ys: ys})
                     sv.summary_writer.add_summary(loss, global_step = gs)
                     sv.summary_writer.add_summary(acc, global_step = gs)
 
