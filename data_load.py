@@ -137,13 +137,14 @@ def get_batch():
 
     return texts, mels, mags, fnames, num_batch
 
-def get_true_batch_discriminator():
+def get_validation_batch_discriminator():
     with tf.device('/cpu:0'):
         # Load VCTK data
-        fpaths_true = get_target_file_paths()
+        fpaths_true = get_target_file_paths()[6000:6100]
         y_true = np.ones((len(fpaths_true), 1), dtype=np.float32)
 
         fpaths_false, _, _ = load_data() # list
+        fpaths_false = fpaths_false[6000:6100]
         y_false = np.zeros((len(fpaths_false), 1), dtype=np.float32)
 
         fpaths = np.concatenate((fpaths_true, fpaths_false))
@@ -183,43 +184,51 @@ def get_true_batch_discriminator():
     return mels, mags, ys, fnames, num_batch
 
 
-# Only really for testing discriminator, won't use on actual model
-def get_false_batch_discriminator():
+
+def get_train_batch_discriminator():
     with tf.device('/cpu:0'):
-        # Load data
-        fpaths, _, _ = load_data() # list
+        # Load VCTK data
+        fpaths_true = get_target_file_paths()[:6000]
+        y_true = np.ones((len(fpaths_true), 1), dtype=np.float32)
+
+        fpaths_false, _, _ = load_data() # list
+        fpaths_false = fpaths_false[:6000]
+        y_false = np.zeros((len(fpaths_false), 1), dtype=np.float32)
+
+        fpaths = np.concatenate((fpaths_true, fpaths_false))
+        ys = np.concatenate((y_true, y_false))
 
         # Calc total batch count
         num_batch = len(fpaths) // hp.B
 
         # Create Queues
-        fpath = tf.train.slice_input_producer([fpaths], shuffle=True)
+        fpath, y = tf.train.slice_input_producer([fpaths, ys], shuffle=True)
 
         if hp.prepro:
-            def _load_spectrograms(fpath):
+            def _load_discriminator_spectrograms(fpath):
                 fname = os.path.basename(fpath)
                 mel = "mels/{}".format(fname.replace("wav", "npy"))
                 mag = "mags/{}".format(fname.replace("wav", "npy"))
                 return fname, np.load(mel), np.load(mag)
-
-            fname, mel, mag = tf.py_func(_load_spectrograms, [fpath], [tf.string, tf.float32, tf.float32])
+            fname, mel, mag = tf.py_func(_load_discriminator_spectrograms, [fpath], [tf.string, tf.float32, tf.float32])
         else:
-            fname, mel, mag = tf.py_func(load_spectrograms, [fpath], [tf.string, tf.float32, tf.float32])  # (None, n_mels)
+            print('Could not load')
 
         # Add shape information
         fname.set_shape(())
         mel.set_shape((None, hp.n_mels))
-        mag.set_shape((None, hp.n_fft//2+1))
+        mag.set_shape((None, hp.n_fft//2 + 1))
         length = tf.shape(mel)[0]
 
         #batching
-        _, (mels, mags, fnames) = tf.contrib.training.bucket_by_sequence_length(
+        _, (mels, mags, ys, fnames) = tf.contrib.training.bucket_by_sequence_length(
                                         input_length=length,
-                                        tensors = [mel, mag, fname],
+                                        tensors = [mel, mag, y, fname],
                                         batch_size = hp.B,
                                         bucket_boundaries = [i for i in range(50, 210, 40)],
                                         num_threads=8,
                                         capacity=hp.B*4,
                                         dynamic_pad=True)
-    return mels, mags, fname, num_batch
+    return mels, mags, ys, fnames, num_batch
+
 

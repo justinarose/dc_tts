@@ -19,7 +19,7 @@ import sys
 
 class DiscriminatorGraph:
     def __init__(self, mode="train"):
-        self.mels, self.mags, self.ys, self.fnames, self.num_batch = get_true_batch_discriminator()
+        self.mels, _, self.ys, _, self.num_batch = get_true_batch_discriminator()
 
         training = True if mode=="train" else False
 
@@ -30,13 +30,19 @@ class DiscriminatorGraph:
             self.global_step = tf.Variable(0, name='global_step', trainable=False)
 
         self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.yLogits, labels=self.ys))
-        tf.summary.scalar('train/loss', self.loss)
+        self.roundedYPred = tf.greater(self.yPred, 0.5)
+        self.correct = tf.equal(self.roundedYPred, ys)
+        self.accuracy = tf.reduce_mean(tf.cast(self.correct, 'float'))
         
+        self.train_loss_summary = tf.summary.scalar('train/train_loss', self.loss)
+        self.train_acc_summary = tf.summary.scalar('train/train_acc', self.accuracy)
+        self.validation_loss_summary = tf.summary.scalar('train/validation_loss', self.loss)
+        self.validation_acc_summary = tf.summary.scalar('train/validation_acc', self.accuracy)
 
         # Training Scheme
         self.lr = learning_rate_decay(hp.lr, self.global_step)
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
-        tf.summary.scalar("lr", self.lr)
+        self.lr_summary = tf.summary.scalar("lr", self.lr)
 
         ## gradient clipping
         self.gvs = self.optimizer.compute_gradients(self.loss)
@@ -46,21 +52,33 @@ class DiscriminatorGraph:
             self.clipped.append((grad, var))
             self.train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
 
+        # Summary
+        self.merged = tf.summary.merge([self.train_loss_summary, self.train_acc_summary, self.lr_summary])
+
 
 if __name__ == '__main__':
 
     g = DiscriminatorGraph(); print("Training Graph loaded")
 
     logdir = hp.logdir + "-" + 'discriminator'
-    sv = tf.train.Supervisor(logdir=logdir, save_model_secs=0, global_step=g.global_step)
+    sv = tf.train.Supervisor(logdir=logdir, save_model_secs=0, global_step=g.global_step, summary_op=g.merged,
+                             save_summaries_secs=60)
     with sv.managed_session() as sess:
         while 1:
             for _ in tqdm(range(g.num_batch), total=g.num_batch, ncols=70, leave=False, unit='b'):
                 gs, _ = sess.run([g.global_step, g.train_op])
 
-                # Write checkpoint files at every 1k steps
+                # Write checkpoint files at every 1000 steps
                 if gs % 1000 == 0:
                     sv.saver.save(sess, logdir + '/model_gs_{}'.format(str(gs // 1000).zfill(3) + "k"))
+
+                # Write validation every 100 steps
+                if gs % 100 == 0:
+                    mels, _, ys, _, _ = get_validation_batch_discriminator()
+                    loss, acc = sess.run([g.validation_loss_summary, g.validation_acc_summary],
+                                         feed_dict={g.mels: mels, g.ys = ys})
+                    sv.summary_writer.add_summary(loss, global_step = gs)
+                    sv.summary_writer.add_summary(acc, global_step = gs)
 
                 # break
                 if gs > hp.num_iterations: break
