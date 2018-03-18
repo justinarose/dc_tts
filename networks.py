@@ -303,46 +303,32 @@ def Discriminator(mels, training=True):
     tensor = padded[:, 0:hp.discriminator_width, :]
     tensor.set_shape((None, hp.discriminator_width, hp.n_mels))
     # -> (B, discriminator_width, discriminator_hidden)
-    for _ in range(2):
+    for _ in range(1):
         tensor = conv1d(tensor, 
-                        filters=3, #hp.discriminator_hidden, 
+                        filters=hp.discriminator_hidden, 
                         size=3, 
                         rate=1, 
                         dropout_rate= hp.dropout_rate,
                         training=training,
+                        activation_fn=tf.nn.relu,
                         scope="C_{}".format(i)); i += 1
 
     # -> (B, discriminator_width/2, discriminator_hidden)
-    tensor = tf.layers.max_pooling1d(tensor, 8, 8)
-    """
-    # -> (B, discriminator_width/2, discriminator_hidden/2)
-    for _ in range(2):
-        tensor = conv1d(tensor, 
-                        filters=hp.discriminator_hidden/2, 
-                        size=3, 
-                        rate=1, 
-                        dropout_rate= hp.dropout_rate,
-                        training=training,
-                        scope="C_{}".format(i)); i += 1
-
-    # -> (B, discriminator_width/4, discriminator_hidden/2)
     tensor = tf.layers.max_pooling1d(tensor, 2, 2)
-
-
-    # -> (B, discriminator_width/4, discriminator_hidden/4)
-    for _ in range(2):
+    # -> (B, discriminator_width/2, discriminator_hidden/4)
+    for _ in range(1):
         tensor = conv1d(tensor, 
-                        filters=hp.discriminator_hidden/4, 
+                        filters=hp.discriminator_hidden/8, 
                         size=3, 
                         rate=1, 
                         dropout_rate= hp.dropout_rate,
                         training=training,
+                        activation_fn=tf.nn.relu,
                         scope="C_{}".format(i)); i += 1
-
+    
     # -> (B, discriminator_width/8, discriminator_hidden/4)
-    tensor = tf.layers.max_pooling1d(tensor, 2, 2)
+    tensor = tf.layers.max_pooling1d(tensor, 4, 4)
 
-    """
     # -> (B, discriminator_width/8 * discriminator_hidden/4)
     tensor = tf.contrib.layers.flatten(tensor)
 

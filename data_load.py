@@ -176,7 +176,7 @@ def get_validation_batch_discriminator():
         _, (mels, mags, ys, fnames) = tf.contrib.training.bucket_by_sequence_length(
                                         input_length=length,
                                         tensors = [mel, mag, y, fname],
-                                        batch_size = hp.B,
+                                        batch_size = hp.B+16,
                                         bucket_boundaries = [i for i in range(50, 210, 40)],
                                         num_threads=8,
                                         capacity=hp.B*4,
@@ -188,7 +188,8 @@ def get_validation_batch_discriminator():
 def get_train_batch_discriminator():
     with tf.device('/cpu:0'):
         # Load VCTK data
-        fpaths_true = get_target_file_paths()[:6000]
+        fpaths_true = get_target_file_paths()[:5000]
+        print("{} {}".format(len(fpaths_true), 'Training Labels'))
         y_true = np.ones((len(fpaths_true), 1), dtype=np.float32)
 
         fpaths_false, _, _ = load_data() # list

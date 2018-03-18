@@ -32,7 +32,7 @@ def get_spectrograms(fpath):
     y, sr = librosa.load(fpath, sr=hp.sr)
 
     # Trimming
-    y, _ = librosa.effects.trim(y)
+    y, _ = librosa.effects.trim(y, top_db=15)
 
     # Preemphasis
     y = np.append(y[0], y[1:] - hp.preemphasis * y[:-1])

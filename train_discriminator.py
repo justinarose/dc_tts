@@ -57,9 +57,10 @@ class DiscriminatorGraph:
             grad = tf.clip_by_value(grad, -1., 1.)
             self.clipped.append((grad, var))
             self.train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
-
+	
+        img = tf.summary.image('train/mel_gt', tf.expand_dims(tf.transpose(self.mels[:1], [0, 2, 1]), -1))
         # Summary
-        self.merged = tf.summary.merge([self.train_loss_summary, self.train_acc_summary, self.lr_summary])
+        self.merged = tf.summary.merge([self.train_loss_summary, self.train_acc_summary, self.lr_summary, img])
 
 
 if __name__ == '__main__':
@@ -73,16 +74,16 @@ if __name__ == '__main__':
         while 1:
             for _ in tqdm(range(g.num_batch), total=g.num_batch, ncols=70, leave=False, unit='b'):
                 gs, _, ys = sess.run([g.global_step, g.train_op, g.ys])
-                print(ys)
-
+                print(ys.shape)	
                 # Write checkpoint files at every 1000 steps
                 if gs % 1000 == 0:
                     sv.saver.save(sess, logdir + '/model_gs_{}'.format(str(gs // 1000).zfill(3) + "k"))
 
                 # Write validation every 100 steps
                 if gs % 100 == 0:
-                    loss, acc = sess.run([g.validation_loss_summary, g.validation_acc_summary],
+                    loss, acc, ys = sess.run([g.validation_loss_summary, g.validation_acc_summary, g.ys],
                                          feed_dict={g.am_validation: True})
+                    print(ys.shape)
                     sv.summary_writer.add_summary(loss, global_step = gs)
                     sv.summary_writer.add_summary(acc, global_step = gs)
 
