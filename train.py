@@ -9,7 +9,7 @@ from __future__ import print_function
 
 from tqdm import tqdm
 
-from data_load import get_batch, load_vocab
+from data_load import get_batch, load_vocab, get_british_true_batch
 from hyperparams import Hyperparams as hp
 from modules import *
 from networks import TextEnc, AudioEnc, AudioDec, Attention, SSRN
@@ -68,8 +68,9 @@ class Graph:
                     self.Y_logits, self.Y = AudioDec(self.R, training=training) # (B, T/r, n_mels)
         else:  # num==2 & training. Note that during training,
             # the ground truth melspectrogram values are fed.
+            self.brit_mels, self.brit_mags, _, _, self.num_batch = get_british_true_batch()
             with tf.variable_scope("SSRN"):
-                self.Z_logits, self.Z = SSRN(self.mels, training=training)
+                self.Z_logits, self.Z = SSRN(self.brit_mels, training=training)
 
         if not training:
             # During inference, the predicted melspectrogram values are fed.
@@ -104,17 +105,17 @@ class Graph:
                 tf.summary.image('train/mel_hat', tf.expand_dims(tf.transpose(self.Y[:1], [0, 2, 1]), -1))
             else: # SSRN
                 # mag L1 loss
-                self.loss_mags = tf.reduce_mean(tf.abs(self.Z - self.mags))
+                self.loss_mags = tf.reduce_mean(tf.abs(self.Z - self.brit_mags))
 
                 # mag binary divergence loss
-                self.loss_bd2 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.Z_logits, labels=self.mags))
+                self.loss_bd2 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.Z_logits, labels=self.brit_mags))
 
                 # total loss
                 self.loss = self.loss_mags + self.loss_bd2
 
                 tf.summary.scalar('train/loss_mags', self.loss_mags)
                 tf.summary.scalar('train/loss_bd2', self.loss_bd2)
-                tf.summary.image('train/mag_gt', tf.expand_dims(tf.transpose(self.mags[:1], [0, 2, 1]), -1))
+                tf.summary.image('train/mag_gt', tf.expand_dims(tf.transpose(self.brit_mags[:1], [0, 2, 1]), -1))
                 tf.summary.image('train/mag_hat', tf.expand_dims(tf.transpose(self.Z[:1], [0, 2, 1]), -1))
 
             # Training Scheme
