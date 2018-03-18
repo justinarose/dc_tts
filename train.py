@@ -12,7 +12,7 @@ from tqdm import tqdm
 from data_load import get_batch, load_vocab, get_british_true_batch
 from hyperparams import Hyperparams as hp
 from modules import *
-from networks import TextEnc, AudioEnc, AudioDec, Attention, SSRN
+from networks import TextEnc, AudioEnc, AudioDec, Attention, SSRN, Discriminator
 import tensorflow as tf
 from utils import *
 import sys
@@ -38,6 +38,7 @@ class Graph:
         ## mags: Magnitude. (B, T, n_fft//2+1) float32
         if mode=="train":
             self.L, self.mels, self.mags, self.fnames, self.num_batch = get_batch()
+            self.brit_mels, self.brit_mags, _, self.brit_files, self.brit_num_batch = get_british_true_batch()
             self.prev_max_attentions = tf.ones(shape=(hp.B,), dtype=tf.int32)
             self.gts = tf.convert_to_tensor(guided_attention())
         else:  # Synthesize
@@ -66,9 +67,18 @@ class Graph:
                                                                              prev_max_attentions=self.prev_max_attentions)
                 with tf.variable_scope("AudioDec"):
                     self.Y_logits, self.Y = AudioDec(self.R, training=training) # (B, T/r, n_mels)
+
+                # gets discriminator output for generated examples
+                with tf.variable_scope("Discriminator"):
+                    self.D_logits, self.D = Discriminator(self.Y, training=training)
+
+                # gets discriminator outputs for true examples
+                with tf.variable_scope("Discriminator", reuse=True):
+                    self.D_brit_logits, self.D_brit = Discriminator(self.brit_mels, training=training)
+
+
         else:  # num==2 & training. Note that during training,
             # the ground truth melspectrogram values are fed.
-            self.brit_mels, self.brit_mags, _, _, self.num_batch = get_british_true_batch()
             with tf.variable_scope("SSRN"):
                 self.Z_logits, self.Z = SSRN(self.brit_mels, training=training)
 
@@ -95,12 +105,29 @@ class Graph:
                 self.mask_sum = tf.reduce_sum(self.attention_masks)
                 self.loss_att /= self.mask_sum
 
-                # total loss
-                self.loss = self.loss_mels + self.loss_bd1 + self.loss_att
+                # context loss
+                self.context_loss = self.loss_mels + self.loss_bd1 + self.loss_att
+
+                # generator loss
+                self.theta_G = (tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="TextEnc") + 
+                          tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="AudioEnc") +
+                          tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Attention") +
+                          tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="AudioDec"))
+
+                self.theta_D = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Discriminator")
+
+                self.G_loss = -tf.reduce_mean(tf.log(self.D))
+                self.D_loss = -tf.reduce_mean(tf.log(self.D_brit) + tf.log(1. - self.D))
+
+                self.loss = hp.context_beta * self.context_loss + (1-hp.context_beta) * self.G_loss
 
                 tf.summary.scalar('train/loss_mels', self.loss_mels)
                 tf.summary.scalar('train/loss_bd1', self.loss_bd1)
                 tf.summary.scalar('train/loss_att', self.loss_att)
+                tf.summary.scalar('train/loss_context', self.context_loss)
+                tf.summary.scalar('train/loss_gen', self.G_loss)
+                tf.summary.scalar('train/loss_disc', self.D_loss)
+                tf.summary.scalar('train/tot_loss', self.loss)
                 tf.summary.image('train/mel_gt', tf.expand_dims(tf.transpose(self.mels[:1], [0, 2, 1]), -1))
                 tf.summary.image('train/mel_hat', tf.expand_dims(tf.transpose(self.Y[:1], [0, 2, 1]), -1))
             else: # SSRN
@@ -123,13 +150,35 @@ class Graph:
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
             tf.summary.scalar("lr", self.lr)
 
-            ## gradient clipping
-            self.gvs = self.optimizer.compute_gradients(self.loss)
-            self.clipped = []
-            for grad, var in self.gvs:
-                grad = tf.clip_by_value(grad, -1., 1.)
-                self.clipped.append((grad, var))
+            ## gradient clipping for 2
+            if num == 2:
+                self.gvs = self.optimizer.compute_gradients(self.loss)
+                self.clipped = []
+                for grad, var in self.gvs:
+                    grad = tf.clip_by_value(grad, -1., 1.)
+                    self.clipped.append((grad, var))
                 self.train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
+
+            ## need generator and discriminator updates for 1
+            if num == 1:
+                # generator
+                self.gvs = self.optimizer.compute_gradients(self.loss, var_list=self.theta_G)
+                self.clipped = []
+                for grad, var in self.gvs:
+                    grad = tf.clip_by_value(grad, -1., 1.)
+                    self.clipped.append((grad, var))
+                self.gen_train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
+
+                # discriminator
+                self.d_gvs = self.optimizer.compute_gradients(self.D_loss, var_list=self.theta_D)
+                self.d_clipped = []
+                for grad, var in self.d_gvs:
+                    grad = tf.clip_by_value(grad, -1., 1.)
+                    self.d_clipped.append((grad, var))
+                self.d_train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
+
+                self.train_op = tf.group(self.gen_train_op, self.d_train_op)
+
 
             # Summary
             self.merged = tf.summary.merge_all()
