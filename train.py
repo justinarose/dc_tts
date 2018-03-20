@@ -9,7 +9,7 @@ from __future__ import print_function
 
 from tqdm import tqdm
 
-from data_load import get_batch, load_vocab, get_british_true_batch
+from data_load import get_batch, load_vocab, get_british_true_batch, get_train_batch_discriminator
 from hyperparams import Hyperparams as hp
 from modules import *
 from networks import TextEnc, AudioEnc, AudioDec, Attention, SSRN, Discriminator
@@ -122,9 +122,9 @@ class Graph:
 
                 self.theta_D = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Text2Mel/Discriminator")
 
-                self.G_loss = -tf.reduce_mean(tf.log(self.D))
+                #self.G_loss = -tf.reduce_mean(tf.log(self.D))
                 #self.D_loss = -tf.reduce_mean(tf.log(self.D_brit) + tf.log(1. - self.D))
-                self.D_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.yLogits, labels=self.ys))
+                self.D_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.D_train_logits, labels=self.train_ys))
 
                 self.loss = self.context_loss #hp.context_beta * self.context_loss + (1-hp.context_beta) * self.G_loss
 
@@ -132,7 +132,7 @@ class Graph:
                 tf.summary.scalar('train/loss_bd1', self.loss_bd1)
                 tf.summary.scalar('train/loss_att', self.loss_att)
                 tf.summary.scalar('train/loss_context', self.context_loss)
-                tf.summary.scalar('train/loss_gen', self.G_loss)
+                #tf.summary.scalar('train/loss_gen', self.G_loss)
                 tf.summary.scalar('train/loss_disc', self.D_loss)
                 tf.summary.scalar('train/tot_loss', self.loss)
                 tf.summary.image('train/mel_gt', tf.expand_dims(tf.transpose(self.mels[:1], [0, 2, 1]), -1))
@@ -183,7 +183,7 @@ class Graph:
                 for grad, var in self.d_gvs:
                     grad = tf.clip_by_value(grad, -1., 1.)
                     self.d_clipped.append((grad, var))
-                self.d_train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
+                self.d_train_op = self.optimizer.apply_gradients(self.d_clipped, global_step=self.global_step)
 
                 self.train_op = self.d_train_op #tf.group(self.gen_train_op, self.d_train_op)
 
