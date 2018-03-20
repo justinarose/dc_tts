@@ -235,7 +235,7 @@ def get_british_true_batch():
     with tf.device('/cpu:0'):
         # Loads VCTK data
         fpaths = get_target_file_paths()[:5000]
-        y_true = np.ones((len(fpaths_true), 1), dtype-np.float32)
+        ys = np.ones((len(fpaths), 1), dtype=np.float32)
 
         # Calc total batch count
         num_batch = len(fpaths) // hp.B

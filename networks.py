@@ -303,7 +303,7 @@ def Discriminator(mels, training=True):
     tensor = padded[:, 0:hp.discriminator_width, :]
     tensor.set_shape((None, hp.discriminator_width, hp.n_mels))
     # -> (B, discriminator_width, discriminator_hidden)
-    for _ in range(1):
+    for _ in range(2):
         tensor = conv1d(tensor, 
                         filters=hp.discriminator_hidden, 
                         size=3, 
@@ -316,9 +316,9 @@ def Discriminator(mels, training=True):
     # -> (B, discriminator_width/2, discriminator_hidden)
     tensor = tf.layers.max_pooling1d(tensor, 2, 2)
     # -> (B, discriminator_width/2, discriminator_hidden/4)
-    for _ in range(1):
+    for _ in range(2):
         tensor = conv1d(tensor, 
-                        filters=hp.discriminator_hidden/8, 
+                        filters=hp.discriminator_hidden/2, 
                         size=3, 
                         rate=1, 
                         dropout_rate= hp.dropout_rate,

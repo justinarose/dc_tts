@@ -69,12 +69,13 @@ class Graph:
                     self.Y_logits, self.Y = AudioDec(self.R, training=training) # (B, T/r, n_mels)
 
                 # gets discriminator output for generated examples
-                with tf.variable_scope("Discriminator"):
-                    self.D_logits, self.D = Discriminator(self.Y, training=training)
+                if training:
+                    with tf.variable_scope("Discriminator"):
+                        self.D_logits, self.D = Discriminator(self.Y, training=training)
 
                 # gets discriminator outputs for true examples
-                with tf.variable_scope("Discriminator", reuse=True):
-                    self.D_brit_logits, self.D_brit = Discriminator(self.brit_mels, training=training)
+                    with tf.variable_scope("Discriminator", reuse=True):
+                        self.D_brit_logits, self.D_brit = Discriminator(self.brit_mels, training=training)
 
 
         else:  # num==2 & training. Note that during training,
@@ -109,17 +110,17 @@ class Graph:
                 self.context_loss = self.loss_mels + self.loss_bd1 + self.loss_att
 
                 # generator loss
-                self.theta_G = (tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="TextEnc") + 
-                          tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="AudioEnc") +
-                          tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Attention") +
-                          tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="AudioDec"))
+                self.theta_G = (tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Text2Mel/TextEnc") + 
+                          tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Text2Mel/AudioEnc") +
+                          tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Text2Mel/Attention") +
+                          tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Text2Mel/AudioDec"))
 
-                self.theta_D = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Discriminator")
+                self.theta_D = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Text2Mel/Discriminator")
 
                 self.G_loss = -tf.reduce_mean(tf.log(self.D))
                 self.D_loss = -tf.reduce_mean(tf.log(self.D_brit) + tf.log(1. - self.D))
 
-                self.loss = hp.context_beta * self.context_loss + (1-hp.context_beta) * self.G_loss
+                self.loss = self.context_loss #hp.context_beta * self.context_loss + (1-hp.context_beta) * self.G_loss
 
                 tf.summary.scalar('train/loss_mels', self.loss_mels)
                 tf.summary.scalar('train/loss_bd1', self.loss_bd1)

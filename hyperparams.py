@@ -45,7 +45,7 @@ class Hyperparams:
 
     # training scheme
     lr = 0.001 # Initial learning rate.
-    logdir = "pretrained_logdir/LJ01"
-    sampledir = 'samples'
+    logdir = "test_logdir/LJ01"
+    sampledir = 'britsamples'
     B = 32 # batch size
     num_iterations = 2000000
