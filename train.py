@@ -71,7 +71,7 @@ class Graph:
                 # gets discriminator output for generated examples
                 if training:
                     with tf.variable_scope("Discriminator"):
-                        self.D_logits, self.D = Discriminator(self.Y, training=training)
+                        self.D_logits, self.D = Discriminator(self.mels, training=training)
 
                 # gets discriminator outputs for true examples
                     with tf.variable_scope("Discriminator", reuse=True):
@@ -178,7 +178,7 @@ class Graph:
                     self.d_clipped.append((grad, var))
                 self.d_train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
 
-                self.train_op = tf.group(self.gen_train_op, self.d_train_op)
+                self.train_op = self.d_train_op #tf.group(self.gen_train_op, self.d_train_op)
 
 
             # Summary
