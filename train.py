@@ -39,6 +39,7 @@ class Graph:
         if mode=="train":
             self.L, self.mels, self.mags, self.fnames, self.num_batch = get_batch()
             self.brit_mels, self.brit_mags, _, self.brit_files, self.brit_num_batch = get_british_true_batch()
+            self.train_mels, _, self.train_ys, _, self.num_batch = get_train_batch_discriminator()
             self.prev_max_attentions = tf.ones(shape=(hp.B,), dtype=tf.int32)
             self.gts = tf.convert_to_tensor(guided_attention())
         else:  # Synthesize
@@ -70,12 +71,16 @@ class Graph:
 
                 # gets discriminator output for generated examples
                 if training:
+                    """
                     with tf.variable_scope("Discriminator"):
                         self.D_logits, self.D = Discriminator(self.mels, training=training)
 
                 # gets discriminator outputs for true examples
                     with tf.variable_scope("Discriminator", reuse=True):
                         self.D_brit_logits, self.D_brit = Discriminator(self.brit_mels, training=training)
+                    """
+                    with tf.variable_scope("Discriminator"):
+                        self.D_train_logits, self.D_train = Discriminator(self.train_mels, training=training)
 
 
         else:  # num==2 & training. Note that during training,
@@ -118,7 +123,8 @@ class Graph:
                 self.theta_D = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Text2Mel/Discriminator")
 
                 self.G_loss = -tf.reduce_mean(tf.log(self.D))
-                self.D_loss = -tf.reduce_mean(tf.log(self.D_brit) + tf.log(1. - self.D))
+                #self.D_loss = -tf.reduce_mean(tf.log(self.D_brit) + tf.log(1. - self.D))
+                self.D_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.yLogits, labels=self.ys))
 
                 self.loss = self.context_loss #hp.context_beta * self.context_loss + (1-hp.context_beta) * self.G_loss
 
@@ -163,13 +169,14 @@ class Graph:
             ## need generator and discriminator updates for 1
             if num == 1:
                 # generator
+                """
                 self.gvs = self.optimizer.compute_gradients(self.loss, var_list=self.theta_G)
                 self.clipped = []
                 for grad, var in self.gvs:
                     grad = tf.clip_by_value(grad, -1., 1.)
                     self.clipped.append((grad, var))
                 self.gen_train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
-
+                """
                 # discriminator
                 self.d_gvs = self.optimizer.compute_gradients(self.D_loss, var_list=self.theta_D)
                 self.d_clipped = []
