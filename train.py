@@ -71,16 +71,14 @@ class Graph:
 
                 # gets discriminator output for generated examples
                 if training:
-                    """
+                    
                     with tf.variable_scope("Discriminator"):
-                        self.D_logits, self.D = Discriminator(self.mels, training=training)
+                        self.D_logits, self.D = Discriminator(self.Y, training=training)
 
                 # gets discriminator outputs for true examples
                     with tf.variable_scope("Discriminator", reuse=True):
                         self.D_brit_logits, self.D_brit = Discriminator(self.brit_mels, training=training)
-                    """
-                    with tf.variable_scope("Discriminator"):
-                        self.D_train_logits, self.D_train = Discriminator(self.train_mels, training=training)
+                    
 
 
         else:  # num==2 & training. Note that during training,
@@ -122,17 +120,16 @@ class Graph:
 
                 self.theta_D = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="Text2Mel/Discriminator")
 
-                #self.G_loss = -tf.reduce_mean(tf.log(self.D))
-                #self.D_loss = -tf.reduce_mean(tf.log(self.D_brit) + tf.log(1. - self.D))
-                self.D_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.D_train_logits, labels=self.train_ys))
-
-                self.loss = self.context_loss #hp.context_beta * self.context_loss + (1-hp.context_beta) * self.G_loss
+                self.G_loss = -tf.reduce_mean(tf.log(self.D))
+                self.D_loss = -tf.reduce_mean(tf.log(self.D_brit) + tf.log(1. - self.D))
+                
+                self.loss = hp.context_beta * self.context_loss + (1-hp.context_beta) * self.G_loss
 
                 tf.summary.scalar('train/loss_mels', self.loss_mels)
                 tf.summary.scalar('train/loss_bd1', self.loss_bd1)
                 tf.summary.scalar('train/loss_att', self.loss_att)
                 tf.summary.scalar('train/loss_context', self.context_loss)
-                #tf.summary.scalar('train/loss_gen', self.G_loss)
+                tf.summary.scalar('train/loss_gen', self.G_loss)
                 tf.summary.scalar('train/loss_disc', self.D_loss)
                 tf.summary.scalar('train/tot_loss', self.loss)
                 tf.summary.image('train/mel_gt', tf.expand_dims(tf.transpose(self.mels[:1], [0, 2, 1]), -1))
@@ -169,14 +166,14 @@ class Graph:
             ## need generator and discriminator updates for 1
             if num == 1:
                 # generator
-                """
+                
                 self.gvs = self.optimizer.compute_gradients(self.loss, var_list=self.theta_G)
                 self.clipped = []
                 for grad, var in self.gvs:
                     grad = tf.clip_by_value(grad, -1., 1.)
                     self.clipped.append((grad, var))
                 self.gen_train_op = self.optimizer.apply_gradients(self.clipped, global_step=self.global_step)
-                """
+                
                 # discriminator
                 self.d_gvs = self.optimizer.compute_gradients(self.D_loss, var_list=self.theta_D)
                 self.d_clipped = []
@@ -185,7 +182,7 @@ class Graph:
                     self.d_clipped.append((grad, var))
                 self.d_train_op = self.optimizer.apply_gradients(self.d_clipped, global_step=self.global_step)
 
-                self.train_op = self.d_train_op #tf.group(self.gen_train_op, self.d_train_op)
+                self.train_op = tf.group(self.gen_train_op, self.d_train_op)
 
 
             # Summary
