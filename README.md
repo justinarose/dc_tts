@@ -13,11 +13,11 @@ Code repository for cs 230 project
 ## Data
 I trained the model on two different speech datasets. <p> 1. [LJ Speech Dataset](https://keithito.com/LJ-Speech-Dataset/) <br/> 2. [VCTK](http://homepages.inf.ed.ac.uk/jyamagis/page3/page58/page58.html)
 
-LJ Speech Dataset was used as the dataset for the labeled distribution. Similarly VCTK was used as the target data distribution. 
+LJ Speech Dataset was used as the dataset for the labeled distribution. Similarly VCTK was used as the target data distribution. Note the hyperparameter that need to be set for the target data directory, which expects a file named fnames.txt with all the files paths to be added.
 
 
 ## Training
-  * STEP 0. Download [LJ Speech Dataset](https://keithito.com/LJ-Speech-Dataset/).
+  * STEP 0. Download [LJ Speech Dataset](https://keithito.com/LJ-Speech-Dataset/) and [VCTK](http://homepages.inf.ed.ac.uk/jyamagis/page3/page58/page58.html)
   * STEP 1. Adjust hyper parameters in `hyperparams.py`. (If you want to do preprocessing, set prepro True`.
   * STEP 2. Run `python train.py 1` for training Text2Mel. (If you set prepro True, run python prepro.py first)
   * STEP 3. Run `python train.py 2` for training SSRN.
