@@ -134,6 +134,7 @@ class Graph:
                 tf.summary.scalar('train/tot_loss', self.loss)
                 tf.summary.image('train/mel_gt', tf.expand_dims(tf.transpose(self.mels[:1], [0, 2, 1]), -1))
                 tf.summary.image('train/mel_hat', tf.expand_dims(tf.transpose(self.Y[:1], [0, 2, 1]), -1))
+                tf.summary.image('train/mel_brit', tf.expand_dims(tf.transpose(self.brit_mels[:1], [0, 2, 1]), -1))
             else: # SSRN
                 # mag L1 loss
                 self.loss_mags = tf.reduce_mean(tf.abs(self.Z - self.brit_mags))
@@ -166,7 +167,7 @@ class Graph:
             ## need generator and discriminator updates for 1
             if num == 1:
                 # generator
-                
+                 
                 self.gvs = self.optimizer.compute_gradients(self.loss, var_list=self.theta_G)
                 self.clipped = []
                 for grad, var in self.gvs:
@@ -181,9 +182,9 @@ class Graph:
                     grad = tf.clip_by_value(grad, -1., 1.)
                     self.d_clipped.append((grad, var))
                 self.d_train_op = self.optimizer.apply_gradients(self.d_clipped, global_step=self.global_step)
-
+	        
                 self.train_op = tf.group(self.gen_train_op, self.d_train_op)
-
+                
 
             # Summary
             self.merged = tf.summary.merge_all()

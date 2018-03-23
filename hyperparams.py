@@ -32,7 +32,7 @@ class Hyperparams:
     attention_win_size = 3
     discriminator_width = 80
     discriminator_hidden = 160
-    context_beta = 0.5
+    context_beta = 0.99
 
     # data
     data = "/home/ubuntu/data/LJSpeech-1.1"
